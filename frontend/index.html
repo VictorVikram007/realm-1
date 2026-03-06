@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Real-Time Air Quality Prediction & Health Advisory System for Indian Cities — 24-48h AQI Forecasting with Personalized Health Recommendations">
+    <title>AirVue — Real-Time Air Quality Prediction & Health Advisory</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <!-- App CSS -->
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <!-- ── Loading Overlay ────────────────────────────────────── -->
+    <div id="loading-overlay" class="loading-overlay">
+        <div class="loader-container">
+            <div class="loader-ring"></div>
+            <div class="loader-text">Loading AirVue</div>
+            <div class="loader-subtext">Initializing air quality data...</div>
+        </div>
+    </div>
+
+    <!-- ── Navbar ──────────────────────────────────────────────── -->
+    <nav id="navbar" class="navbar">
+        <div class="nav-brand">
+            <div class="brand-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" />
+                    <path d="M8 12c0-2.21 1.79-4 4-4s4 1.79 4 4" />
+                    <circle cx="12" cy="12" r="1.5" />
+                </svg>
+            </div>
+            <span class="brand-name">AirVue</span>
+            <span class="brand-tag">India AQI Intelligence</span>
+        </div>
+        <div class="nav-search">
+            <div class="search-wrapper">
+                <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="M21 21l-4.35-4.35" />
+                </svg>
+                <input type="text" id="city-search" placeholder="Search city..." autocomplete="off">
+                <div id="search-dropdown" class="search-dropdown hidden"></div>
+            </div>
+        </div>
+        <div class="nav-status">
+            <div id="api-status" class="status-badge offline">
+                <span class="status-dot"></span>
+                <span class="status-text">Connecting...</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ── Hero Section ───────────────────────────────────────── -->
+    <section id="hero" class="hero-section">
+        <div class="hero-bg-particles" id="particles"></div>
+        <div class="hero-content">
+            <div class="hero-city-label">
+                <span id="hero-city-name">Select a City</span>
+                <span id="hero-datetime" class="hero-datetime"></span>
+            </div>
+
+            <div class="hero-aqi-display">
+                <div class="aqi-circle" id="aqi-circle">
+                    <div class="aqi-circle-inner">
+                        <div class="aqi-number" id="aqi-number">--</div>
+                        <div class="aqi-label">AQI</div>
+                    </div>
+                    <svg class="aqi-ring" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="54" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="6" />
+                        <circle id="aqi-ring-fill" cx="60" cy="60" r="54" fill="none" stroke="#00e400" stroke-width="6"
+                            stroke-dasharray="339.292" stroke-dashoffset="339.292" stroke-linecap="round"
+                            transform="rotate(-90 60 60)" />
+                    </svg>
+                </div>
+
+                <div class="hero-info-panel">
+                    <div class="aqi-bucket-badge" id="aqi-bucket-badge">
+                        <span id="aqi-bucket-text">--</span>
+                    </div>
+                    <div class="pollutant-grid" id="pollutant-grid">
+                        <div class="pollutant-card">
+                            <span class="pollutant-name">PM2.5</span>
+                            <span class="pollutant-value" id="val-pm25">--</span>
+                        </div>
+                        <div class="pollutant-card">
+                            <span class="pollutant-name">PM10</span>
+                            <span class="pollutant-value" id="val-pm10">--</span>
+                        </div>
+                        <div class="pollutant-card">
+                            <span class="pollutant-name">NO₂</span>
+                            <span class="pollutant-value" id="val-no2">--</span>
+                        </div>
+                        <div class="pollutant-card">
+                            <span class="pollutant-name">SO₂</span>
+                            <span class="pollutant-value" id="val-so2">--</span>
+                        </div>
+                        <div class="pollutant-card">
+                            <span class="pollutant-name">CO</span>
+                            <span class="pollutant-value" id="val-co">--</span>
+                        </div>
+                        <div class="pollutant-card">
+                            <span class="pollutant-name">O₃</span>
+                            <span class="pollutant-value" id="val-o3">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Main Dashboard ─────────────────────────────────────── -->
+    <main class="dashboard">
+        <!-- Map Section -->
+        <section class="dashboard-section" id="map-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" />
+                        <circle cx="12" cy="10" r="3" />
+                    </svg>
+                    Air Quality Map
+                </h2>
+                <p class="section-subtitle">Monitoring stations across India</p>
+            </div>
+            <div class="map-container">
+                <div id="aqi-map" class="aqi-map"></div>
+                <div class="map-legend" id="map-legend">
+                    <div class="legend-title">AQI Scale</div>
+                    <div class="legend-item"><span class="legend-color" style="background:#00e400"></span>Good (0-50)
+                    </div>
+                    <div class="legend-item"><span class="legend-color" style="background:#ffff00"></span>Satisfactory
+                        (51-100)</div>
+                    <div class="legend-item"><span class="legend-color" style="background:#ff7e00"></span>Moderate
+                        (101-200)</div>
+                    <div class="legend-item"><span class="legend-color" style="background:#ff0000"></span>Poor (201-300)
+                    </div>
+                    <div class="legend-item"><span class="legend-color" style="background:#8f3f97"></span>Very Poor
+                        (301-400)</div>
+                    <div class="legend-item"><span class="legend-color" style="background:#7e0023"></span>Severe
+                        (401-500)</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Forecast Section -->
+        <section class="dashboard-section" id="forecast-section">
+            <div class="section-header">
+                <div class="section-header-top">
+                    <h2 class="section-title">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                        </svg>
+                        48-Hour AQI Forecast
+                    </h2>
+                    <div class="model-selector-wrapper">
+                        <label for="model-type-select" class="model-label">🤖 AI Model:</label>
+                        <select id="model-type-select" class="model-select">
+                            <option value="xgboost" selected>⚡ XGBoost</option>
+                            <option value="cnn_lstm">🔬 CNN-LSTM</option>
+                            <option value="bilstm">🧠 BiLSTM</option>
+                            <option value="arimax">📈 ARIMAX</option>
+                        </select>
+                        <span id="model-loading" class="model-loading hidden">⏳</span>
+                    </div>
+                </div>
+                <p class="section-subtitle" id="forecast-city-label">Select a city to view forecast</p>
+            </div>
+            <div class="chart-container">
+                <canvas id="forecast-chart"></canvas>
+            </div>
+            <div class="forecast-summary" id="forecast-summary">
+                <div class="forecast-card" id="fc-1h">
+                    <div class="fc-horizon">+1h</div>
+                    <div class="fc-aqi" id="fc-aqi-1">--</div>
+                    <div class="fc-bucket" id="fc-bucket-1">--</div>
+                </div>
+                <div class="forecast-card" id="fc-6h">
+                    <div class="fc-horizon">+6h</div>
+                    <div class="fc-aqi" id="fc-aqi-6">--</div>
+                    <div class="fc-bucket" id="fc-bucket-6">--</div>
+                </div>
+                <div class="forecast-card" id="fc-12h">
+                    <div class="fc-horizon">+12h</div>
+                    <div class="fc-aqi" id="fc-aqi-12">--</div>
+                    <div class="fc-bucket" id="fc-bucket-12">--</div>
+                </div>
+                <div class="forecast-card" id="fc-24h">
+                    <div class="fc-horizon">+24h</div>
+                    <div class="fc-aqi" id="fc-aqi-24">--</div>
+                    <div class="fc-bucket" id="fc-bucket-24">--</div>
+                </div>
+                <div class="forecast-card" id="fc-48h">
+                    <div class="fc-horizon">+48h</div>
+                    <div class="fc-aqi" id="fc-aqi-48">--</div>
+                    <div class="fc-bucket" id="fc-bucket-48">--</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Historical Chart Section -->
+        <section class="dashboard-section" id="history-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="12 6 12 12 16 14" />
+                    </svg>
+                    Historical AQI Trend
+                </h2>
+                <p class="section-subtitle" id="history-city-label">Last 90 days of air quality data</p>
+            </div>
+            <div class="chart-container">
+                <canvas id="history-chart"></canvas>
+            </div>
+        </section>
+
+        <!-- Health Advisory Section -->
+        <section class="dashboard-section" id="advisory-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                    </svg>
+                    Personalized Health Advisory
+                </h2>
+                <p class="section-subtitle">Recommendations based on your health profile</p>
+            </div>
+
+            <div class="advisory-controls">
+                <label class="advisory-label" for="user-group-select">I am:</label>
+                <div class="select-wrapper">
+                    <select id="user-group-select">
+                        <option value="general">👤 General Population</option>
+                        <option value="children">👶 Children (under 14)</option>
+                        <option value="elderly">👴 Elderly (65+)</option>
+                        <option value="asthma">🫁 Asthma / Respiratory Patients</option>
+                        <option value="heart">❤️ Heart Disease Patients</option>
+                        <option value="outdoor_workers">👷 Outdoor Workers</option>
+                        <option value="pregnant">🤰 Pregnant Women</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="advisory-content" id="advisory-content">
+                <div class="advisory-placeholder">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                        opacity="0.4">
+                        <path
+                            d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
+                    </svg>
+                    <p>Select a city to receive personalized health recommendations</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- City Rankings Section -->
+        <section class="dashboard-section" id="rankings-section">
+            <div class="section-header">
+                <h2 class="section-title">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="20" x2="18" y2="10" />
+                        <line x1="12" y1="20" x2="12" y2="4" />
+                        <line x1="6" y1="20" x2="6" y2="14" />
+                    </svg>
+                    City AQI Rankings
+                </h2>
+                <p class="section-subtitle">Most polluted cities first</p>
+            </div>
+            <div class="rankings-grid" id="rankings-grid">
+                <!-- Populated by JS -->
+            </div>
+        </section>
+    </main>
+
+    <!-- ── Footer ─────────────────────────────────────────────── -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-brand">AirVue — Air Quality Intelligence</div>
+            <div class="footer-links">
+                <span>Data: <a href="https://www.kaggle.com/datasets/rohanrao/air-quality-data-in-india"
+                        target="_blank">Kaggle India AQI</a></span>
+                <span>API: <a href="https://aqicn.org/api/" target="_blank">AQICN</a></span>
+                <span>Standards: <a href="https://cpcb.nic.in/" target="_blank">CPCB India</a></span>
+            </div>
+            <div class="footer-disclaimer">For educational purposes. Consult local authorities for official air quality
+                advisories.</div>
+        </div>
+    </footer>
+
+    <!-- ── Scripts ─────────────────────────────────────────────── -->
+    <script src="/js/map.js"></script>
+    <script src="/js/charts.js"></script>
+    <script src="/js/advisory.js"></script>
+    <script src="/js/app.js"></script>
+</body>
+
+</html>

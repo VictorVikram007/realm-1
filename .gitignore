@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+
+# Data and Models
+*.csv
+*.joblib
+*.pkl
+*.keras
+backend/models/
+!backend/models/.gitkeep
+
+# IDEs and Tools
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+server_log.txt
+*.log
