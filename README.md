@@ -59,4 +59,4 @@ AirVue is an advanced, real-time Air Quality Index (AQI) monitoring and forecast
 The frontend requests prediction data via REST API endpoints (`/api/predict/<city>`). The Flask backend uses a lazy-loading multi-model registry to instantly serve predictions from the selected pre-trained AI architecture stored in `backend/models/`.
 
 ## 📜 License
-MIT License
+@VictorVikram007
