@@ -5,6 +5,7 @@
 const AQIMap = (() => {
     let map = null;
     let markersLayer = null;
+    let nearbyMarkersLayer = null;
     let onCitySelect = null;
 
     const AQI_COLORS = {
@@ -53,6 +54,7 @@ const AQIMap = (() => {
         }).addTo(map);
 
         markersLayer = L.layerGroup().addTo(map);
+        nearbyMarkersLayer = L.layerGroup().addTo(map);
 
         return map;
     }
@@ -127,7 +129,18 @@ const AQIMap = (() => {
     }
 
     function highlightCity(cityName, stations) {
-        // Auto-focus and zoom disabled per user request
+        if (!map || !stations) return;
+
+        // Find the first station matching the city name
+        const cityStation = stations.find(s => s.city && s.city.toLowerCase() === cityName.toLowerCase() && s.lat && s.lng);
+
+        if (cityStation) {
+            // Re-center map and zoom into the city
+            map.flyTo([cityStation.lat, cityStation.lng], 10, {
+                animate: true,
+                duration: 1.5
+            });
+        }
     }
 
     function resize() {
@@ -136,5 +149,53 @@ const AQIMap = (() => {
         }
     }
 
-    return { init, loadStations, highlightCity, resize, getAqiColor, getAqiBucket };
+    function loadNearbyStations(stations) {
+        if (!nearbyMarkersLayer) return;
+        nearbyMarkersLayer.clearLayers();
+
+        stations.forEach(station => {
+            if (!station.lat || !station.lng || !station.aqi) return;
+
+            const color = getAqiColor(station.aqi);
+            const bucket = getAqiBucket(station.aqi);
+
+            // Add a vibrant marker for nearby
+            const marker = L.circleMarker([station.lat, station.lng], {
+                radius: 10,
+                fillColor: color,
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.9,
+            });
+
+            // Make it pulse via css class if possible, or just standard for now
+            const popupContent = `
+                <div style="font-family: 'Inter', sans-serif; min-width: 160px;">
+                    <div style="font-size: 13px; font-weight: 700; margin-bottom: 4px; color: #3b82f6;">Nearby Station</div>
+                    <div style="font-size: 14px; font-weight: 700; margin-bottom: 6px;">
+                        ${station.name}
+                    </div>
+                    <div style="font-size: 12px; color: #94a3b8; margin-bottom: 8px;">
+                        ${station.city}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="background: ${color}; color: #000; padding: 2px 10px; border-radius: 12px; font-weight: 700; font-size: 13px;">
+                            AQI: ${station.aqi}
+                        </span>
+                        <span style="font-size: 12px; color: #94a3b8;">${bucket}</span>
+                    </div>
+                </div>
+            `;
+
+            marker.bindPopup(popupContent);
+            marker.on('click', () => {
+                if (onCitySelect) onCitySelect(station.city);
+            });
+
+            nearbyMarkersLayer.addLayer(marker);
+        });
+    }
+
+    return { init, loadStations, highlightCity, resize, getAqiColor, getAqiBucket, loadNearbyStations };
 })();

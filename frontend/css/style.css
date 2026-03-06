@@ -1216,3 +1216,122 @@ body {
 .model-loading.hidden {
     display: none;
 }
+
+/* ── Nearby Area ───────────────────────────────────────────── */
+#nearby-section {
+    transition: all var(--transition-base);
+}
+
+.nearby-scroll-wrapper {
+    overflow-x: auto;
+    padding-bottom: var(--space-md);
+    margin: 0 calc(-1 * var(--space-xl));
+    padding: 0 var(--space-xl) var(--space-md);
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-blue) var(--bg-secondary);
+}
+
+.nearby-scroll-wrapper::-webkit-scrollbar {
+    height: 8px;
+}
+
+.nearby-scroll-wrapper::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+    border-radius: 4px;
+}
+
+.nearby-scroll-wrapper::-webkit-scrollbar-thumb {
+    background-color: var(--accent-blue);
+    border-radius: 4px;
+}
+
+.nearby-grid {
+    display: flex;
+    gap: var(--space-md);
+    min-width: min-content;
+}
+
+.nearby-card {
+    display: flex;
+    background: var(--bg-glass);
+    border: 1px solid var(--border-glass);
+    border-radius: var(--radius-md);
+    width: 260px;
+    flex-shrink: 0;
+    overflow: hidden;
+    cursor: pointer;
+    transition: var(--transition-base);
+}
+
+.nearby-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent-blue);
+    background: var(--bg-glass-hover);
+    box-shadow: var(--shadow-md);
+}
+
+.nearby-aqi-indicator {
+    width: 8px;
+    flex-shrink: 0;
+}
+
+.nearby-card-content {
+    padding: var(--space-md);
+    flex: 1;
+}
+
+.nearby-station-name {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 2px;
+}
+
+.nearby-station-city {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: var(--space-sm);
+}
+
+.nearby-aqi-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 4px;
+}
+
+.nearby-aqi-val {
+    font-family: var(--font-mono);
+    font-weight: 800;
+    font-size: 1.1rem;
+}
+
+.nearby-bucket {
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+}
+
+.badge {
+    background: var(--accent-gradient);
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
+.nearby-loading,
+.nearby-placeholder {
+    width: 100%;
+    text-align: center;
+    padding: var(--space-2xl) 0;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}

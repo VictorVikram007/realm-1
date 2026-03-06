@@ -94,6 +94,15 @@
                 </div>
 
                 <div class="hero-info-panel">
+                    <!-- New Weather Widget -->
+                    <div class="weather-widget hidden" id="weather-widget">
+                        <div class="weather-icon"><img id="weather-icon-img" src="" alt="Weather" /></div>
+                        <div class="weather-info">
+                            <span class="temp-value" id="weather-temp">--°C</span>
+                            <span class="humidity-value" id="weather-condition">--</span>
+                        </div>
+                    </div>
+
                     <div class="aqi-bucket-badge" id="aqi-bucket-badge">
                         <span id="aqi-bucket-text">--</span>
                     </div>
@@ -162,6 +171,33 @@
             </div>
         </section>
 
+        <!-- Nearby Stations Section -->
+        <section class="dashboard-section hidden" id="nearby-section">
+            <div class="section-header">
+                <div class="section-header-top">
+                    <h2 class="section-title">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M12 22s-8-4.5-8-11.8A8 8 0 0112 2a8 8 0 018 8.2c0 7.3-8 11.8-8 11.8z" />
+                            <circle cx="12" cy="10" r="3" />
+                        </svg>
+                        Nearby Stations <span id="nearby-count-badge" class="badge">0</span>
+                    </h2>
+                </div>
+                <p class="section-subtitle">Real-time air quality in the surrounding area of <span
+                        id="nearby-city-name">the selected city</span></p>
+            </div>
+            <div class="nearby-scroll-wrapper">
+                <div class="nearby-grid" id="nearby-grid">
+                    <!-- Populated via JS -->
+                    <div class="nearby-loading">
+                        <div class="loader-ring" style="width: 30px; height: 30px; border-width: 2px;"></div>
+                        <p>Locating nearby stations...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
         <!-- Forecast Section -->
         <section class="dashboard-section" id="forecast-section">
             <div class="section-header">
@@ -191,27 +227,42 @@
             </div>
             <div class="forecast-summary" id="forecast-summary">
                 <div class="forecast-card" id="fc-1h">
-                    <div class="fc-horizon">+1h</div>
+                    <div class="fc-horizon-top">
+                        <span class="fc-horizon">+1h</span>
+                        <div class="fc-weather" id="fc-w-1">--°C</div>
+                    </div>
                     <div class="fc-aqi" id="fc-aqi-1">--</div>
                     <div class="fc-bucket" id="fc-bucket-1">--</div>
                 </div>
                 <div class="forecast-card" id="fc-6h">
-                    <div class="fc-horizon">+6h</div>
+                    <div class="fc-horizon-top">
+                        <span class="fc-horizon">+6h</span>
+                        <div class="fc-weather" id="fc-w-6">--°C</div>
+                    </div>
                     <div class="fc-aqi" id="fc-aqi-6">--</div>
                     <div class="fc-bucket" id="fc-bucket-6">--</div>
                 </div>
                 <div class="forecast-card" id="fc-12h">
-                    <div class="fc-horizon">+12h</div>
+                    <div class="fc-horizon-top">
+                        <span class="fc-horizon">+12h</span>
+                        <div class="fc-weather" id="fc-w-12">--°C</div>
+                    </div>
                     <div class="fc-aqi" id="fc-aqi-12">--</div>
                     <div class="fc-bucket" id="fc-bucket-12">--</div>
                 </div>
                 <div class="forecast-card" id="fc-24h">
-                    <div class="fc-horizon">+24h</div>
+                    <div class="fc-horizon-top">
+                        <span class="fc-horizon">+24h</span>
+                        <div class="fc-weather" id="fc-w-24">--°C</div>
+                    </div>
                     <div class="fc-aqi" id="fc-aqi-24">--</div>
                     <div class="fc-bucket" id="fc-bucket-24">--</div>
                 </div>
                 <div class="forecast-card" id="fc-48h">
-                    <div class="fc-horizon">+48h</div>
+                    <div class="fc-horizon-top">
+                        <span class="fc-horizon">+48h</span>
+                        <div class="fc-weather" id="fc-w-48">--°C</div>
+                    </div>
                     <div class="fc-aqi" id="fc-aqi-48">--</div>
                     <div class="fc-bucket" id="fc-bucket-48">--</div>
                 </div>

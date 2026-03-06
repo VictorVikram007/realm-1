@@ -200,6 +200,82 @@ def _parse_feed_response(data):
     return result
 
 
+def fetch_nearby_stations(lat, lng, radius_deg=1.0):
+    """
+    Fetch nearby stations based on lat/lng using AQICN bounds API.
+
+    Args:
+        lat: Latitude
+        lng: Longitude
+        radius_deg: Radius in degrees to form the bounding box
+
+    Returns:
+        List of matching stations or empty list on failure
+    """
+    cache_key = f'nearby_{lat}_{lng}_{radius_deg}'
+    cached = _get_cached(cache_key)
+    if cached:
+        return cached
+
+    bounds = [
+        lat - radius_deg, lng - radius_deg, # latlng1 (bottom-left)
+        lat + radius_deg, lng + radius_deg  # latlng2 (top-right)
+    ]
+    bounds_str = ",".join(map(str, bounds))
+
+    try:
+        url = f'{AQICN_BASE_URL}/v2/map/bounds?latlng={bounds_str}&token={AQICN_TOKEN}'
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+
+        if data.get('status') != 'ok':
+            print(f"[WARN] AQICN returned non-ok status for bounds {bounds_str}: {data.get('data')}")
+            return []
+
+        results = []
+        for item in data.get('data', []):
+            try:
+                # v2/map/bounds returns: { "lat": ..., "lon": ..., "uid": ..., "aqi": ..., "station": { "name": ..., ... } }
+                val = item.get('aqi')
+                if val == '-' or val is None:
+                    continue
+                aqi = int(val)
+                # Ensure we have valid lat/lon
+                item_lat = item.get('lat')
+                item_lon = item.get('lon')
+                if item_lat is None or item_lon is None:
+                    continue
+
+                name = item.get('station', {}).get('name', 'Unknown Station')
+                
+                results.append({
+                    'uid': item.get('uid'),
+                    'name': name,
+                    'aqi': aqi,
+                    'lat': float(item_lat),
+                    'lng': float(item_lon),
+                    'city': name.split(',')[0].strip() if ',' in name else name
+                })
+            except (ValueError, TypeError):
+                continue
+
+        # Sort by proximity to center
+        def _dist(s):
+            return ((s['lat'] - lat)**2 + (s['lng'] - lng)**2)**0.5
+        
+        results.sort(key=_dist)
+        
+        # Limit to top 15 closest stations
+        results = results[:15]
+
+        _set_cache(cache_key, results)
+        return results
+    except Exception as e:
+        print(f"[ERROR] AQICN nearby search error for {lat},{lng}: {e}")
+        return []
+
+
 def get_status():
     """Check if AQICN API is accessible."""
     try:

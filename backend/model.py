@@ -116,12 +116,13 @@ class AQIPredictionModel:
             predictions[horizon] = self.models[horizon].predict(X)
         return predictions
 
-    def predict_single(self, X_row):
+    def predict_single(self, X_row, future_weather=None):
         """
         Generate forecast for a single data point (latest observation).
 
         Args:
             X_row: Single row of features (DataFrame or 2D array)
+            future_weather: List of hourly weather dicts mapping to future horizons.
 
         Returns:
             List of dicts with horizon, predicted AQI, and AQI bucket
@@ -130,8 +131,25 @@ class AQIPredictionModel:
         for horizon in self.HORIZONS:
             if horizon not in self.models:
                 continue
-            pred_aqi = float(self.models[horizon].predict(X_row)[0])
+                
+            X_input = X_row.copy() if hasattr(X_row, 'copy') else X_row
+            
+            # If future weather is fetched, try projecting standard weather features into the future observation 
+            if future_weather and isinstance(X_input, pd.DataFrame):
+                # The AQI model was trained on historical data. If we had trained it on weather, we could apply it here.
+                # Since the current models weren't inherently trained on weather variables (from preprocess.py review), 
+                # we don't strictly *need* to inject feature columns here, but we pass them to establish the API pattern.
+                if horizon < len(future_weather):
+                    hw = future_weather[horizon]
+                    # Only inject if the columns exist in the originally trained model features.
+                    if 'temp_c' in X_input.columns: X_input['temp_c'] = hw.get('temp_c', 0)
+                    if 'wind_kph' in X_input.columns: X_input['wind_kph'] = hw.get('wind_kph', 0)
+                    if 'precip_mm' in X_input.columns: X_input['precip_mm'] = hw.get('precip_mm', 0)
+                    if 'humidity' in X_input.columns: X_input['humidity'] = hw.get('humidity', 0)
+            
+            pred_aqi = float(self.models[horizon].predict(X_input)[0])
             pred_aqi = max(0, pred_aqi)  # AQI can't be negative
+            
             forecast.append({
                 'hours_ahead': horizon,
                 'predicted_aqi': round(pred_aqi, 1),

@@ -91,6 +91,20 @@
         // Highlight on map
         AQIMap.highlightCity(cityName, allStations);
 
+        // Fetch nearby based on city coords
+        const cityStation = allStations.find(s => s.city === cityName && s.lat && s.lng);
+        let nearbyPromise = Promise.resolve({ status: 'none', stations: [] });
+        if (cityStation) {
+            nearbyPromise = fetch(`${API_BASE}/api/nearby?lat=${cityStation.lat}&lng=${cityStation.lng}`).then(r => r.json());
+            document.getElementById('nearby-section')?.classList.remove('hidden');
+            const grid = document.getElementById('nearby-grid');
+            if (grid) grid.innerHTML = `<div class="nearby-loading"><div class="loader-ring" style="width: 30px; height: 30px; border-width: 2px;"></div><p>Locating nearby stations...</p></div>`;
+            const badge = document.getElementById('nearby-count-badge');
+            if (badge) badge.textContent = '...';
+        } else {
+            document.getElementById('nearby-section')?.classList.add('hidden');
+        }
+
         // Load forecast, history, and advisory in parallel
         const group = Advisory.getGroup();
 
@@ -99,17 +113,18 @@
             const modelLoading = document.getElementById('model-loading');
             if (modelLoading) modelLoading.classList.remove('hidden');
 
-            const [forecastRes, historyRes, realtimeRes] = await Promise.all([
+            const [forecastRes, historyRes, realtimeRes, nearbyRes] = await Promise.all([
                 fetch(`${API_BASE}/api/predict/${encodeURIComponent(cityName)}?model_type=${modelType}`).then(r => r.json()),
                 fetch(`${API_BASE}/api/historical/${encodeURIComponent(cityName)}`).then(r => r.json()),
                 fetch(`${API_BASE}/api/realtime/${encodeURIComponent(cityName)}`).then(r => r.json()),
+                nearbyPromise
             ]);
 
             if (modelLoading) modelLoading.classList.add('hidden');
 
             if (realtimeRes.status === 'ok') {
                 // Update hero again with fresh real-time data
-                updateHero(cityName, realtimeRes.data);
+                updateHero(cityName, realtimeRes.data, realtimeRes.weather);
             }
 
             if (forecastRes.status === 'ok') {
@@ -127,13 +142,19 @@
                     `${cityName} — Last ${historyRes.history.length} days`;
             }
 
+            if (nearbyRes && nearbyRes.status === 'ok') {
+                renderNearby(nearbyRes.stations || [], cityName);
+                if (AQIMap.loadNearbyStations) AQIMap.loadNearbyStations(nearbyRes.stations || []);
+            } else if (cityStation) {
+                renderNearby([], cityName);
+            }
+
         } catch (error) {
             console.error(`Error loading data for ${cityName}:`, error);
         }
     }
 
-    // ── Hero Update ─────────────────────────────────────────
-    function updateHero(cityName, realtimeData = null) {
+    function updateHero(cityName, realtimeData = null, weatherData = null) {
         document.getElementById('hero-city-name').textContent = cityName;
 
         let aqi = 0;
@@ -172,6 +193,21 @@
         updateAqiRing(aqi);
         updateAqiBucket(aqi);
         updatePollutants(pData);
+        updateWeatherWidget(weatherData);
+    }
+
+    function updateWeatherWidget(weatherData) {
+        const widget = document.getElementById('weather-widget');
+        if (!widget) return;
+
+        if (weatherData && weatherData.temp_c !== undefined) {
+            widget.classList.remove('hidden');
+            document.getElementById('weather-icon-img').src = weatherData.condition_icon.replace('64x64', '128x128');
+            document.getElementById('weather-temp').textContent = `${Math.round(weatherData.temp_c)}°C`;
+            document.getElementById('weather-condition').innerHTML = `${weatherData.condition_text} <br> 💨 ${weatherData.wind_kph} km/h`;
+        } else {
+            widget.classList.add('hidden');
+        }
     }
 
     function animateNumber(elementId, target) {
@@ -263,6 +299,7 @@
                 const aqiEl = document.getElementById(`fc-aqi-${h}`);
                 const bucketEl = document.getElementById(`fc-bucket-${h}`);
                 const cardEl = document.getElementById(`fc-${h}h`);
+                const weatherEl = document.getElementById(`fc-w-${h}`);
 
                 if (aqiEl) {
                     aqiEl.textContent = Math.round(fp.predicted_aqi);
@@ -271,6 +308,17 @@
                 if (bucketEl) bucketEl.textContent = fp.aqi_bucket;
                 if (cardEl) {
                     cardEl.style.borderColor = fp.aqi_color || getAqiColorHex(fp.predicted_aqi);
+                }
+
+                // Weather Injection
+                if (weatherEl && fp.weather) {
+                    weatherEl.innerHTML = `
+                        <img src="${fp.weather.condition_icon}" alt="icon" /> 
+                        ${Math.round(fp.weather.temp_c)}°C
+                        <span class="rain" style="margin-left: 6px;">💧 ${fp.weather.precip_mm}mm</span>
+                    `;
+                } else if (weatherEl) {
+                    weatherEl.innerHTML = `--°C`;
                 }
             });
         }
@@ -325,6 +373,44 @@
             const aqi = cityData ? cityData.aqi : 0;
             loadAdvisory(aqi, group);
         }
+    }
+
+    // ── Nearby Stations ──────────────────────────────────────
+    function renderNearby(stations, cityName) {
+        const titleEl = document.getElementById('nearby-city-name');
+        if (titleEl) titleEl.textContent = cityName;
+
+        const grid = document.getElementById('nearby-grid');
+        const badge = document.getElementById('nearby-count-badge');
+
+        if (!grid) return;
+
+        // Filter out stations with empty or '-' AQI
+        const validStations = (stations || []).filter(s => s.aqi && !isNaN(s.aqi));
+
+        if (badge) badge.textContent = validStations.length;
+
+        if (validStations.length === 0) {
+            grid.innerHTML = `<div class="nearby-placeholder">No nearby real-time stations found within 150km.</div>`;
+            return;
+        }
+
+        grid.innerHTML = validStations.map(s => {
+            const color = getAqiColorHex(s.aqi);
+            return `
+            <div class="nearby-card" onclick="window.__selectCity && window.__selectCity('${s.city}')">
+                <div class="nearby-aqi-indicator" style="background: ${color}"></div>
+                <div class="nearby-card-content">
+                    <div class="nearby-station-name" title="${s.name}">${s.name}</div>
+                    <div class="nearby-station-city">${s.city}</div>
+                    <div class="nearby-aqi-row">
+                        <span class="nearby-aqi-val" style="color: ${color}">${s.aqi} AQI</span>
+                        <span class="nearby-bucket">${s.bucket || '--'}</span>
+                    </div>
+                </div>
+            </div>
+            `;
+        }).join('');
     }
 
     // ── Search ──────────────────────────────────────────────

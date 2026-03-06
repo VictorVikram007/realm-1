@@ -212,7 +212,7 @@ def api_cities():
         return new_data
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
-        futures = {executor.submit(fetch_for_city, c, data): c for c, data in city_latest.items()}
+        futures = {executor.submit(fetch_for_city, c, data): c for c, data in city_latest.items() if c.lower() != 'brajrajnagar'}
         for future in concurrent.futures.as_completed(futures):
             cities.append(future.result())
 
@@ -262,9 +262,19 @@ def api_predict(city):
             if 'AQI_inter_ewm12_rm6' in features.columns:
                 features['AQI_inter_ewm12_rm6'] = features['AQI_ewm_12'] * features['AQI_rolling_mean_6']
 
+        # Handle Weather fetching for ML and UI
+        from weather_client import fetch_forecast_weather
+        weather_forecast = fetch_forecast_weather(matched_city, days=3)
+        
+        hourly_weather_forecast = []
+        if weather_forecast and 'forecast' in weather_forecast:
+            # Flatten days into a single hourly list
+            for day in weather_forecast['forecast']['forecastday']:
+                hourly_weather_forecast.extend(day['hour'])
+
         # 3. Route to the correct model backend
         active_model = _get_model(model_type)
-        forecast = active_model.predict_single(features)
+        forecast = active_model.predict_single(features, future_weather=hourly_weather_forecast)
         print(f"[DEBUG] Model: {model_type} for {matched_city} | First 3 Preds: {[f.get('predicted_aqi') for f in forecast[:3]]}")
 
         # Enrich forecast with AQI bucket info (for consistency with XGBoost output)
@@ -276,6 +286,24 @@ def api_predict(city):
                 bucket = get_aqi_bucket(pred)
                 f['aqi_bucket'] = bucket.get('label', '')
                 f['aqi_color'] = bucket.get('color', '#666')
+                
+                # Attach the weather corresponding to this hour ahead
+                if hourly_weather_forecast:
+                    # Match by offset from current local hour
+                    try:
+                        from datetime import datetime
+                        current_hour = datetime.now().hour
+                        target_idx = current_hour + f['hours_ahead']
+                        if target_idx < len(hourly_weather_forecast):
+                            f['weather'] = {
+                                'temp_c': hourly_weather_forecast[target_idx]['temp_c'],
+                                'humidity': hourly_weather_forecast[target_idx]['humidity'],
+                                'precip_mm': hourly_weather_forecast[target_idx]['precip_mm'],
+                                'condition_text': hourly_weather_forecast[target_idx]['condition']['text'],
+                                'condition_icon': hourly_weather_forecast[target_idx]['condition']['icon']
+                            }
+                    except Exception as e:
+                        print(f"[ERROR] Weather indexing failed: {e}")
             enriched.append(f)
 
         # Generate hourly interpolated forecast for charting
@@ -329,10 +357,29 @@ def api_model_comparison():
 
 @app.route('/api/realtime/<city>')
 def api_realtime(city):
-    """Fetch real-time AQI from AQICN API."""
-    data = fetch_city_aqi(city)
-    if data:
-        return jsonify({'status': 'ok', 'data': data})
+    """Fetch real-time AQI from AQICN API and Weather from WeatherAPI."""
+    from weather_client import fetch_current_weather
+    
+    waqi_data = fetch_city_aqi(city)
+    weather_data = fetch_current_weather(city)
+    
+    # Format the weather to be easily digested by the frontend
+    current_weather = None
+    if weather_data and 'current' in weather_data:
+        current_weather = {
+            'temp_c': weather_data['current']['temp_c'],
+            'humidity': weather_data['current']['humidity'],
+            'wind_kph': weather_data['current']['wind_kph'],
+            'condition_text': weather_data['current']['condition']['text'],
+            'condition_icon': weather_data['current']['condition']['icon']
+        }
+
+    if waqi_data:
+        return safe_jsonify({
+            'status': 'ok', 
+            'data': waqi_data,
+            'weather': current_weather
+        })
     else:
         # Fallback to dataset
         fallback = city_latest.get(city)
@@ -342,7 +389,12 @@ def api_realtime(city):
                     fallback = city_latest[c]
                     break
         if fallback:
-            return jsonify({'status': 'ok', 'data': fallback, 'source': 'dataset_fallback'})
+            return safe_jsonify({
+                'status': 'ok', 
+                'data': fallback, 
+                'source': 'dataset_fallback',
+                'weather': current_weather
+            })
         return jsonify({'status': 'error', 'message': f'No data for {city}'}), 404
 
 
@@ -431,6 +483,34 @@ def api_stations():
         stations.append(station)
 
     return safe_jsonify({'status': 'ok', 'stations': stations, 'count': len(stations)})
+
+
+@app.route('/api/nearby')
+def api_nearby():
+    """Get nearby stations directly from AQICN API based on lat/lng."""
+    lat = request.args.get('lat', type=float)
+    lng = request.args.get('lng', type=float)
+    
+    if lat is None or lng is None:
+        return jsonify({'status': 'error', 'message': 'lat and lng parameters are required'}), 400
+        
+    try:
+        from aqicn_client import fetch_nearby_stations
+        
+        # Use a 1.5 degree radius for bounding box calculation (~150km)
+        stations = fetch_nearby_stations(lat, lng, radius_deg=1.5)
+        
+        # Decorate stations with bucket info
+        from health_advisory import get_aqi_bucket
+        
+        for station in stations:
+            station['bucket'] = get_aqi_bucket(station['aqi'])['label']
+            
+        return safe_jsonify({'status': 'ok', 'stations': stations, 'count': len(stations)})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
 @app.route('/api/historical/<city>')

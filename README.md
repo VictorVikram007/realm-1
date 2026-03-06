@@ -4,14 +4,16 @@ AirVue is an advanced, real-time Air Quality Index (AQI) monitoring and forecast
 
 ## 🚀 Features
 
-*   **Live AQI Dashboard:** Real-time air quality tracking for major Indian cities using the AQICN API.
-*   **Interactive Map:** A dynamic Leaflet.js map with color-coded markers pinpointing individual monitoring stations across the country.
-*   **Multi-Model Forecasting:** Switch seamlessly between four predictive models to view 48-hour AQI forecasts:
+*   **Live AQI & Weather Dashboard:** Real-time air quality and weather tracking for major Indian cities using AQICN and WeatherAPI.com.
+*   **Aesthetic Glassmorphism UI:** A premium, modern interface with dynamic weather widgets, glass-effect cards, and smooth micro-animations.
+*   **Interactive Map:** A dynamic Leaflet.js map with color-coded markers and nearby station detection.
+*   **Multi-Model Forecasting:** Switch seamlessly between four predictive models to view 48-hour AQI forecasts with integrated weather data:
     *   **XGBoost (Default):** Lightning-fast gradient boosting for detecting immediate, non-linear pollution spikes.
     *   **CNN-LSTM:** Deep learning hybrid that identifies complex, hidden temporal patterns in recent pollution sequences.
-    *   **BiLSTM:** Advanced neural network that analyzes pollution momentum in both forward and backward time directions to map cyclonical trends.
+    *   **BiLSTM:** Advanced neural network that analyzes pollution momentum in both forward and backward time directions.
     *   **ARIMAX:** Classical statistical model ensuring mathematically stable, linear forecasting against historical variance.
-*   **Personalized Health Advisory:** Select from demographic profiles (General Public, Asthmatics, Elderly, Athletes, etc.) to receive tailored, actionable health recommendations based on both current and predicted AQI levels.
+*   **Weather-Integrated Predictions:** Real-time and forecasted weather (temperature, humidity, precipitation) are displayed alongside AQI forecasts for a holistic environmental view.
+*   **Personalized Health Advisory:** Select from demographic profiles to receive tailored, actionable health recommendations.
 
 ## 🛠️ Technology Stack
 
