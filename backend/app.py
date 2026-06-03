@@ -610,12 +610,8 @@ def _interpolate_forecast(current_aqi, forecast_points):
 
 
 # ── Main ──────────────────────────────────────────────────────────────
+init_app()  # runs for both gunicorn and direct execution
+
 if __name__ == '__main__':
-    print("=" * 60)
-    print("  AQI Prediction & Health Advisory API")
-    print("=" * 60)
-    init_app()
-    print(f"\n[INFO] Starting server at http://localhost:5000")
-    print(f"[INFO] Frontend: http://localhost:5000/")
-    print(f"[INFO] API Health: http://localhost:5000/api/health")
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False)
