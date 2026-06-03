@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: realm-1-backend
+    env: python
+    rootDir: realm-1-main
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn backend.app:app --bind 0.0.0.0:$PORT
+    autoDeploy: true

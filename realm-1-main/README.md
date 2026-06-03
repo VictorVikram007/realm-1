@@ -56,6 +56,18 @@ AirVue is an advanced, real-time Air Quality Index (AQI) monitoring and forecast
     ```
     The application will automatically open in your browser at `http://localhost:5000/`.
 
+## 🚀 Deploy on Render
+
+This repository includes a `render.yaml` and `Procfile` for deploying the backend as a Render web service.
+
+1.  In Render, create a new Web Service and connect this GitHub repository.
+2.  Use the repository root as the project root.
+3.  Render will install dependencies from `backend/requirements.txt`.
+4.  The service will start with `gunicorn backend.app:app --bind 0.0.0.0:$PORT`.
+5.  Make sure the dataset CSV files remain in the repository root so the API can load city and station data.
+
+If you deploy without the datasets, the API will still start, but endpoints like `/api/cities` and `/api/predict/<city>` will return empty or not-found responses until the CSV files are added.
+
 ## 📌 Architecture
 
 The frontend requests prediction data via REST API endpoints (`/api/predict/<city>`). The Flask backend uses a lazy-loading multi-model registry to instantly serve predictions from the selected pre-trained AI architecture stored in `backend/models/`.
