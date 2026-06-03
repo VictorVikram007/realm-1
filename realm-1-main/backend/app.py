@@ -175,25 +175,9 @@ def init_app():
     except Exception as e:
         print(f"[WARN] Could not prepare city data: {e}")
 
-    # If city data cache is empty (no dataset), create a minimal sample city so predictions can be exercised
-    if len(city_data_cache) == 0:
-        try:
-            print("[WARN] No city data found — creating fallback sample city 'SampleCity'")
-            feature_cols = get_feature_columns()
-            sample_row = pd.DataFrame([{f: 0 for f in feature_cols}])
-            if 'hour' in sample_row.columns: sample_row.at[0, 'hour'] = 12
-            if 'day_of_week' in sample_row.columns: sample_row.at[0, 'day_of_week'] = 2
-            if 'month' in sample_row.columns: sample_row.at[0, 'month'] = 6
-            if 'city_encoded' in sample_row.columns: sample_row.at[0, 'city_encoded'] = 0
-            city_data_cache['SampleCity'] = sample_row
-            city_latest['SampleCity'] = {
-                'city': 'SampleCity', 'aqi': 50, 'pm25': 20, 'pm10': 30,
-                'no2': 10, 'so2': 5, 'co': 0.3, 'o3': 12,
-                'datetime': str(pd.Timestamp.now()), 'bucket': get_aqi_bucket(50)['label']
-            }
-            print("[INFO] Fallback sample city created: SampleCity")
-        except Exception as e:
-            print(f"[ERROR] Could not create sample city: {e}")
+    # If no dataset is present, we keep `city_data_cache` empty so callers
+    # receive an explicit 'not found' response. Development-only fallbacks
+    # (e.g. SampleCity) were removed to keep `main` production-ready.
 
 
 # ── Static File Serving ───────────────────────────────────────────────
@@ -240,16 +224,9 @@ def api_cities():
     return safe_jsonify({'status': 'ok', 'cities': cities, 'count': len(cities)})
 
 
-@app.route('/debug/state')
-def debug_state():
-    """Debug endpoint: show cached city keys and latest map keys."""
-    try:
-        return jsonify({
-            'city_data_cache_keys': list(city_data_cache.keys()),
-            'city_latest_keys': list(city_latest.keys()),
-        })
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+# Development-only debug endpoint removed to keep `main` branch production-ready.
+# If you need runtime inspection, consider enabling this behind an
+# environment-controlled flag or implementing it in a separate debug branch.
 
 
 @app.route('/api/predict/<city>')
