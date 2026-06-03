@@ -1,8 +1,11 @@
 import requests
 import time
+import os
 from functools import lru_cache
 
-WEATHER_API_KEY = '77ebd6df4093472295e184847260603'
+# Read the WeatherAPI key from environment for production/deployments.
+# Falls back to the existing demo key for local development.
+WEATHER_API_KEY = os.environ.get('WEATHER_API_KEY', '77ebd6df4093472295e184847260603')
 BASE_URL = 'https://api.weatherapi.com/v1'
 
 # We use lru_cache for simple in-memory caching to avoid rate limits
