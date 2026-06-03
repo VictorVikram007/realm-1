@@ -1,0 +1,21 @@
+[INFO] Loaded model: c:/Users/Vikram/OneDrive/Desktop/DS/backend/models\xgb_aqi_1h.joblib
+[INFO] Loaded model: c:/Users/Vikram/OneDrive/Desktop/DS/backend/models\xgb_aqi_6h.joblib
+[INFO] Loaded model: c:/Users/Vikram/OneDrive/Desktop/DS/backend/models\xgb_aqi_12h.joblib
+[INFO] Loaded model: c:/Users/Vikram/OneDrive/Desktop/DS/backend/models\xgb_aqi_24h.joblib
+[INFO] Loaded model: c:/Users/Vikram/OneDrive/Desktop/DS/backend/models\xgb_aqi_48h.joblib
+                 feature  importance
+23             AQI_lag_1    0.301414
+64   AQI_inter_lag1_rm24    0.188907
+63   AQI_inter_ewm12_rm6    0.155097
+59            AQI_ewm_72    0.087518
+30    AQI_rolling_mean_6    0.044340
+55            AQI_ewm_12    0.030729
+57            AQI_ewm_36    0.024907
+58            AQI_ewm_48    0.023317
+56            AQI_ewm_24    0.016578
+41  PM25_rolling_mean_12    0.013171
+24             AQI_lag_2    0.010005
+62  AQI_rolling_mean_168    0.007374
+21             month_cos    0.005783
+22          city_encoded    0.005456
+32   AQI_rolling_mean_24    0.005163
